@@ -1,0 +1,541 @@
+---
+title: "Gun Violence sim and parameter recovery"
+author: "Asger"
+date: "2023-05-21"
+output: html_document
+---
+
+
+
+https://mc-stan.org/docs/reference-manual/types.html
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+pacman::p_load(pacman, tidyverse, stringr, posterior, cmdstanr)
+
+source("src/Coherence Analysis Functions.R")
+```
+
+
+
+
+
+```{r Simulate Data 1 - no agreement}
+
+set.seed(1337)
+source("src/Coherence Analysis Functions.R")
+
+mu_beta_vector = c(-0.80, -0.4, 0, 0.4, 0.8)
+
+
+sigma_vector = c(0.2, 0.3, 0.4, 0.5, 0.6)
+
+
+simulated_data = simulate_data(mu_vector,sigma_vector, mu_vector,  sigma_vector,
+                           mu_vector,sigma_vector, mu_vector,  sigma_vector,
+                           N_sims = 10, loc = 1, scale = 3, N_channels = 33)
+
+
+dim(simulated_data$sims_array)
+
+simulated_data$parameters
+```
+
+
+```{r Parameter Recovery 1 - no agreement}
+  
+
+
+file_coherence <- file.path("Stan Code/coherence_over_time.stan")
+
+mod_coherence <- cmdstan_model(file_coherence,
+                     cpp_options= list(stan_threads= TRUE),stanc_options= list("O1"))
+
+
+sims = simulated_data$sims_array[,,,,1:2]
+parameters = simulated_data$parameters
+
+
+set.seed(1337)
+parameter_recovery(sims, parameters,mod_coherence, chains = 3, parallel_chains = 3, 1000, 1000, 
+                   filenames = c(1,2, 3,4,5,6,7,8,9,10))
+
+  
+save_summary("ParameterRecovery", "parameter_recovery", 1)
+save_summary("ParameterRecovery", "parameter_recovery", 2)
+save_summary("ParameterRecovery", "parameter_recovery", 3)
+save_summary("ParameterRecovery", "parameter_recovery", 4)
+save_summary("ParameterRecovery", "parameter_recovery", 5)
+save_summary("ParameterRecovery", "parameter_recovery", 6)
+save_summary("ParameterRecovery", "parameter_recovery", 7)
+save_summary("ParameterRecovery", "parameter_recovery", 8)
+save_summary("ParameterRecovery", "parameter_recovery", 9)
+save_summary("ParameterRecovery", "parameter_recovery", 10)
+
+```
+
+```{r}
+
+parameters = read_csv("ParameterRecovery/parameters.csv")
+
+  
+  mu_beta_1_real_true = c()
+  mu_beta_1_real_est = c()
+    
+  sigma_beta_1_real_true = c()
+  sigma_beta_1_real_est= c()
+  
+  mu_beta_1_surrogate_true = c()
+  mu_beta_1_surrogate_est = c()
+  
+  sigma_beta_1_surrogate_true= c()
+  sigma_beta_1_surrogate_est= c()
+  
+  mu_beta_2_real_true = c()
+  mu_beta_2_real_est = c()
+   
+  sigma_beta_2_real_true  = c()
+  sigma_beta_2_real_est  = c()
+  
+  mu_beta_2_surrogate_true  = c()
+  mu_beta_2_surrogate_est  = c()
+    
+  sigma_beta_2_surrogate_true = c()
+  sigma_beta_2_surrogate_est = c()
+  
+  
+  
+  mu_beta_3_real_true = c()
+  mu_beta_3_real_est = c()
+   
+  sigma_beta_3_real_true  = c()
+  sigma_beta_3_real_est  = c()
+  
+  mu_beta_3_surrogate_true  = c()
+  mu_beta_3_surrogate_est  = c()
+    
+  sigma_beta_3_surrogate_true = c()
+  sigma_beta_3_surrogate_est = c()
+# Go through every column.
+for (i in 1:nrow(parameters[1:10,])){
+# Get the appropriate samples object read in and summarized. (indexed by i)
+# fit <- readRDS(temp_rds_file)
+  filename = paste("ParameterRecovery", "/sim", i, "_summary", ".RDS", sep = "")
+  samples_summary = read_csv(filename)
+  
+  # Get all relevant parameters
+  
+  mu_beta_1_real_true = mu_beta_1_real_true %>% c(parameters[i,1]  %>%  as.numeric())
+  mu_beta_1_real_est = mu_beta_1_real_est %>% c(get_est(samples_summary, "mu_beta_1_real"))
+  
+  sigma_beta_1_real_true =sigma_beta_1_real_true %>% c(parameters[i,2]  %>%  as.numeric())
+  sigma_beta_1_real_est =sigma_beta_1_real_est  %>% c(get_est(samples_summary, "sigma_beta_1_real"))
+  
+  mu_beta_1_surrogate_true =mu_beta_1_surrogate_true %>% c(parameters[i,3]  %>%  as.numeric())
+  mu_beta_1_surrogate_est =mu_beta_1_surrogate_est %>% c(get_est(samples_summary, "mu_beta_1_surrogate"))
+  
+  sigma_beta_1_surrogate_true =sigma_beta_1_surrogate_true %>% c(parameters[i,4]  %>%  as.numeric())
+  sigma_beta_1_surrogate_est =sigma_beta_1_surrogate_est  %>% c(get_est(samples_summary, "sigma_beta_1_surrogate"))
+  
+  mu_beta_2_real_true = mu_beta_2_real_true %>% c(parameters[i,5]  %>%  as.numeric())
+  mu_beta_2_real_est =mu_beta_2_real_est %>% c(get_est(samples_summary, "mu_beta_2_real"))
+  
+  sigma_beta_2_real_true = sigma_beta_2_real_true  %>% c(parameters[i,6]  %>%  as.numeric())
+  sigma_beta_2_real_est =  sigma_beta_2_real_est%>% c(get_est(samples_summary, "sigma_beta_2_real"))
+  
+  mu_beta_2_surrogate_true = mu_beta_2_surrogate_true%>% c(parameters[i,7]  %>%  as.numeric())
+  mu_beta_2_surrogate_est =mu_beta_2_surrogate_est %>% c(get_est(samples_summary, "mu_beta_2_surrogate"))
+    
+  sigma_beta_2_surrogate_true =sigma_beta_2_surrogate_true%>% c( parameters[i,8]  %>%  as.numeric())
+  sigma_beta_2_surrogate_est =sigma_beta_2_surrogate_est%>% c(get_est(samples_summary, "sigma_beta_2_surrogate"))
+ 
+  
+   
+}
+
+  recovery_results = data.frame("mu_beta_1_real_true" = mu_beta_1_real_true,
+                                "mu_beta_1_real_est" = mu_beta_1_real_est
+                                ,"sigma_beta_1_real_true" = sigma_beta_1_real_true
+                                ,"sigma_beta_1_real_est" = sigma_beta_1_real_est
+                                ,"mu_beta_1_surrogate_true"= mu_beta_1_surrogate_true
+                                ,"mu_beta_1_surrogate_est"= mu_beta_1_surrogate_est
+                                ,"sigma_beta_1_surrogate_true"= sigma_beta_1_surrogate_true
+                                ,"sigma_beta_1_surrogate_est"= sigma_beta_1_surrogate_est
+                                ,"mu_beta_2_real_true"= mu_beta_2_real_true
+                                ,"mu_beta_2_real_est"= mu_beta_2_real_est
+                                ,"sigma_beta_2_real_true"= sigma_beta_2_real_true
+                                ,"sigma_beta_2_real_est"= sigma_beta_2_real_est
+                                ,"mu_beta_2_surrogate_true"= mu_beta_2_surrogate_true
+                                ,"mu_beta_2_surrogate_est"= mu_beta_2_surrogate_est
+                                ,"sigma_beta_2_surrogate_true"= sigma_beta_2_surrogate_true
+                                ,"sigma_beta_2_surrogate_est"= sigma_beta_2_surrogate_est
+  )  
+
+
+write_csv(recovery_results, "ParameterRecovery/RecoveryResults.csv")
+
+
+
+recovery_results = read_csv("ParameterRecovery/RecoveryResults.csv")
+sim1_summary = read_csv("ParameterRecovery/sim1_summary.RDS")
+sim2_summary = read_csv("ParameterRecovery/sim2_summary.RDS")
+sim3_summary = read_csv("ParameterRecovery/sim3_summary.RDS")
+sim4_summary = read_csv("ParameterRecovery/sim4_summary.RDS")
+sim5_summary = read_csv("ParameterRecovery/sim5_summary.RDS")
+sim6_summary = read_csv("ParameterRecovery/sim6_summary.RDS")
+sim7_summary = read_csv("ParameterRecovery/sim7_summary.RDS")
+sim8_summary = read_csv("ParameterRecovery/sim8_summary.RDS")
+sim9_summary = read_csv("ParameterRecovery/sim9_summary.RDS")
+sim10_summary = read_csv("ParameterRecovery/sim10_summary.RDS")
+
+Rhat_max = c()
+Rhat_min = c()
+for (i in 1:10){
+# Get the approprirate samples object read in and summarized. (indexed by i)
+# fit <- readRDS(temp_rds_file)
+  filename = paste("ParameterRecovery", "/sim", i, "_summary.RDS", sep = "")
+  
+  summary = read_csv(filename)
+  
+  Rhat = range(summary$rhat)
+  
+  Rhat_max = c(Rhat_max, Rhat[2])
+  Rhat_min = c(Rhat_min, Rhat[1])
+}
+
+table = tibble("Simulation" = c(1:10), "Rhat_min" = Rhat_min, "Rhat_max" = Rhat_max)
+write_csv(table, "ParameterRecovery/ConvergenceTable.csv")
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+```{r Simulate Data (Agreement)}
+
+pacman::p_load(pacman, tidyverse, stringr, posterior, cmdstanr)
+set.seed(1337)
+
+source("src/Coherence Analysis Functions.R")
+source("src/Agreement Coherence Analysis.R")
+
+
+
+mu_vector_1_2 = c(-0.80, -0.4, 0, 0.4, 0.8)
+
+mu_vector_3 = c(0, 0.1, 0.2, 0.3, 0.4)
+
+sigma_vector = c(0.2, 0.3, 0.4, 0.5, 0.6)
+
+
+simulated_data = simulate_data_2(mu_vector_1_2, sigma_vector, mu_vector_1_2, sigma_vector,
+                           mu_vector_1_2, sigma_vector, mu_vector_1_2, sigma_vector,
+                           mu_vector_3, sigma_vector, mu_vector_3, sigma_vector,
+                           ,N_sims = 20, N_channels = 33, loc = 1, scale = 3)
+
+simulated_data_array = simulated_data$sims_array
+
+parameters = simulated_data$parameters
+
+SVS_agreement_array = simulated_data$agreement_array
+
+
+
+file_coherence <- file.path("Stan Code/coherence_with_agreement.stan")
+
+mod_coherence <- cmdstan_model(file_coherence,
+                     cpp_options= list(stan_threads= TRUE),stanc_options= list("O1"))
+
+
+
+```
+
+```{r Parameter Recovery of simulated data (Agreement)}
+
+parameter_recovery_agreement = function(simulated_data_array, parameters, SVS_agreement_array, stan_model, 
+                                        chains, parallel_chains, iter_warmup, iter_sampling, filenames, directory = "ParameterRecovery_2", refresh = 5){
+  
+  write_csv(as.data.frame(parameters), paste(directory, "/parameters.csv", sep = ""))
+  
+  dims = dim(simulated_data_array)
+  N_visits = dims[1]
+  N_conditions = dims[2]
+  N_channels = dims[3]
+  N_pairs = dims[4]
+  N_sims = dims[5]
+  N_pairs_real = N_pairs/2
+  N_pairs_surrogate = N_pairs_real
+  
+  options(mc.cores=4)
+  
+  
+  
+  for (i in 1:N_sims){
+  
+    
+  coherence = simulated_data_array[,,,,i]
+  SVS_agreement = SVS_agreement_array[,,i]
+    
+    
+  
+  data <- list(N_channels = N_channels,
+               N_visits=N_visits,
+               N_pairs=N_pairs,
+               N_pairs_real=N_pairs_real,
+               N_pairs_surrogate=N_pairs_surrogate,
+               N_conditions=N_conditions,
+               coherence=coherence,
+               SVS_agreement = SVS_agreement,
+               visit = c(0,1))
+  
+  # Run model
+  samples <- mod_coherence$sample(
+    data = data,
+    seed = 1000,
+    chains = chains,
+    parallel_chains = parallel_chains,
+    threads_per_chain = 1,
+    iter_warmup = iter_warmup,
+    iter_sampling = iter_sampling,
+    refresh = refresh,
+    max_treedepth = 20,
+    adapt_delta = 0.99,)
+  
+  samples$save_object(file =paste(directory, "/parameter_recovery", filenames[i],".RDS", sep = "") )
+
+  
+  }
+  
+}
+
+first_two_sims = simulated_data$sims_array[,,,,1:2]
+parameters = simulated_data$parameters
+SVS_agreement_array = simulated_data$agreement_array
+
+a_few_more_sims = simulated_data$sims_array[,,,,3:6]
+
+more_sims = simulated_data$sims_array[,,,,7:10]
+
+set.seed(1337)
+
+
+parameter_recovery_agreement(first_two_sims, 
+                             parameters,
+                             SVS_agreement_array,
+                             mod_coherence,
+                             chains = 3,
+                             parallel_chains = 3,
+                             1000,
+                             1000,
+                             filenames = c(1,2))
+#1 and 2 had E-BFMI value below 0.3 in all chains.
+
+parameter_recovery_agreement(more_sims,
+                   parameters,
+                   SVS_agreement_array,
+                   mod_coherence,
+                   chains = 3,
+                   parallel_chains = 3,
+                   1000,
+                   1000,
+                   filenames = c(7,8,9,10), refresh = 10)
+  
+  
+  
+
+save_summary("ParameterRecovery_2", "parameter_recovery", 1)
+save_summary("ParameterRecovery_2", "parameter_recovery", 2)
+save_summary("ParameterRecovery_2", "parameter_recovery", 3)
+save_summary("ParameterRecovery_2", "parameter_recovery", 4)
+save_summary("ParameterRecovery_2", "parameter_recovery", 5)
+save_summary("ParameterRecovery_2", "parameter_recovery", 6)
+save_summary("ParameterRecovery_2", "parameter_recovery", 7)
+save_summary("ParameterRecovery_2", "parameter_recovery", 8)
+save_summary("ParameterRecovery_2", "parameter_recovery", 9)
+save_summary("ParameterRecovery_2", "parameter_recovery", 10)
+
+  
+```
+
+
+
+
+```{r Parameter recovery agreement (continued)}
+
+# So. We'll want to take the parameters object.
+
+parameters = read_csv("ParameterRecovery_2/parameters.csv")
+
+  
+  mu_beta_1_real_true = c()
+  mu_beta_1_real_est = c()
+    
+  sigma_beta_1_real_true = c()
+  sigma_beta_1_real_est= c()
+  
+  mu_beta_1_surrogate_true = c()
+  mu_beta_1_surrogate_est = c()
+  
+  sigma_beta_1_surrogate_true= c()
+  sigma_beta_1_surrogate_est= c()
+  
+  mu_beta_2_real_true = c()
+  mu_beta_2_real_est = c()
+   
+  sigma_beta_2_real_true  = c()
+  sigma_beta_2_real_est  = c()
+  
+  mu_beta_2_surrogate_true  = c()
+  mu_beta_2_surrogate_est  = c()
+    
+  sigma_beta_2_surrogate_true = c()
+  sigma_beta_2_surrogate_est = c()
+  
+  
+  
+  mu_beta_3_real_true = c()
+  mu_beta_3_real_est = c()
+   
+  sigma_beta_3_real_true  = c()
+  sigma_beta_3_real_est  = c()
+  
+  mu_beta_3_surrogate_true  = c()
+  mu_beta_3_surrogate_est  = c()
+    
+  sigma_beta_3_surrogate_true = c()
+  sigma_beta_3_surrogate_est = c()
+# Go through every column.
+for (i in 1:nrow(parameters[1:10,])){
+# Get the approprirate samples object read in and summarized. (indexed by i)
+# fit <- readRDS(temp_rds_file)
+  filename = paste("ParameterRecovery_2", "/sim", i, "_summary", ".RDS", sep = "")
+  samples_summary = read_csv(filename)
+  
+  # Get all relevant parameters
+  
+  mu_beta_1_real_true = mu_beta_1_real_true %>% c(parameters[i,1]  %>%  as.numeric())
+  mu_beta_1_real_est = mu_beta_1_real_est %>% c(get_est(samples_summary, "mu_beta_1_real"))
+  
+  sigma_beta_1_real_true =sigma_beta_1_real_true %>% c(parameters[i,2]  %>%  as.numeric())
+  sigma_beta_1_real_est =sigma_beta_1_real_est  %>% c(get_est(samples_summary, "sigma_beta_1_real"))
+  
+  mu_beta_1_surrogate_true =mu_beta_1_surrogate_true %>% c(parameters[i,3]  %>%  as.numeric())
+  mu_beta_1_surrogate_est =mu_beta_1_surrogate_est %>% c(get_est(samples_summary, "mu_beta_1_surrogate"))
+  
+  sigma_beta_1_surrogate_true =sigma_beta_1_surrogate_true %>% c(parameters[i,4]  %>%  as.numeric())
+  sigma_beta_1_surrogate_est =sigma_beta_1_surrogate_est  %>% c(get_est(samples_summary, "sigma_beta_1_surrogate"))
+  
+  mu_beta_2_real_true = mu_beta_2_real_true %>% c(parameters[i,5]  %>%  as.numeric())
+  mu_beta_2_real_est =mu_beta_2_real_est %>% c(get_est(samples_summary, "mu_beta_2_real"))
+  
+  sigma_beta_2_real_true = sigma_beta_2_real_true  %>% c(parameters[i,6]  %>%  as.numeric())
+  sigma_beta_2_real_est =  sigma_beta_2_real_est%>% c(get_est(samples_summary, "sigma_beta_2_real"))
+  
+  mu_beta_2_surrogate_true = mu_beta_2_surrogate_true%>% c(parameters[i,7]  %>%  as.numeric())
+  mu_beta_2_surrogate_est =mu_beta_2_surrogate_est %>% c(get_est(samples_summary, "mu_beta_2_surrogate"))
+    
+  sigma_beta_2_surrogate_true =sigma_beta_2_surrogate_true%>% c( parameters[i,8]  %>%  as.numeric())
+  sigma_beta_2_surrogate_est =sigma_beta_2_surrogate_est%>% c(get_est(samples_summary, "sigma_beta_2_surrogate"))
+ 
+  
+  mu_beta_3_real_true = mu_beta_3_real_true %>% c(parameters[i,9]  %>%  as.numeric())
+  mu_beta_3_real_est =mu_beta_3_real_est %>% c(get_est(samples_summary, "mu_beta_3_real"))
+  
+  sigma_beta_3_real_true = sigma_beta_3_real_true  %>% c(parameters[i,10]  %>%  as.numeric())
+  sigma_beta_3_real_est =  sigma_beta_3_real_est%>% c(get_est(samples_summary, "sigma_beta_3_real"))
+  
+  mu_beta_3_surrogate_true = mu_beta_3_surrogate_true%>% c(parameters[i,11]  %>%  as.numeric())
+  mu_beta_3_surrogate_est =mu_beta_3_surrogate_est %>% c(get_est(samples_summary, "mu_beta_3_surrogate"))
+    
+  sigma_beta_3_surrogate_true =sigma_beta_3_surrogate_true%>% c( parameters[i,12]  %>%  as.numeric())
+  sigma_beta_3_surrogate_est =sigma_beta_3_surrogate_est%>% c(get_est(samples_summary, "sigma_beta_3_surrogate"))
+ 
+  
+   
+}
+
+  recovery_results = data.frame("mu_beta_1_real_true" = mu_beta_1_real_true,
+                                "mu_beta_1_real_est" = mu_beta_1_real_est
+                                ,"sigma_beta_1_real_true" = sigma_beta_1_real_true
+                                ,"sigma_beta_1_real_est" = sigma_beta_1_real_est
+                                ,"mu_beta_1_surrogate_true"= mu_beta_1_surrogate_true
+                                ,"mu_beta_1_surrogate_est"= mu_beta_1_surrogate_est
+                                ,"sigma_beta_1_surrogate_true"= sigma_beta_1_surrogate_true
+                                ,"sigma_beta_1_surrogate_est"= sigma_beta_1_surrogate_est
+                                ,"mu_beta_2_real_true"= mu_beta_2_real_true
+                                ,"mu_beta_2_real_est"= mu_beta_2_real_est
+                                ,"sigma_beta_2_real_true"= sigma_beta_2_real_true
+                                ,"sigma_beta_2_real_est"= sigma_beta_2_real_est
+                                ,"mu_beta_2_surrogate_true"= mu_beta_2_surrogate_true
+                                ,"mu_beta_2_surrogate_est"= mu_beta_2_surrogate_est
+                                ,"sigma_beta_2_surrogate_true"= sigma_beta_2_surrogate_true
+                                ,"sigma_beta_2_surrogate_est"= sigma_beta_2_surrogate_est
+                                ,"mu_beta_3_real_true"= mu_beta_3_real_true
+                                ,"mu_beta_3_real_est"= mu_beta_3_real_est
+                                ,"sigma_beta_3_real_true"= sigma_beta_3_real_true
+                                ,"sigma_beta_3_real_est"= sigma_beta_3_real_est
+                                ,"mu_beta_3_surrogate_true"= mu_beta_3_surrogate_true
+                                ,"mu_beta_3_surrogate_est"= mu_beta_3_surrogate_est
+                                ,"sigma_beta_3_surrogate_true"= sigma_beta_3_surrogate_true
+                                ,"sigma_beta_3_surrogate_est"= sigma_beta_3_surrogate_est
+  )  
+
+write_csv(recovery_results, "ParameterRecovery_2/RecoveryResults.csv")
+
+
+
+recovery_results = read_csv("ParameterRecovery_2/RecoveryResults.csv")
+sim1_summary = read_csv("ParameterRecovery_2/sim1_summary.RDS")
+sim2_summary = read_csv("ParameterRecovery_2/sim2_summary.RDS")
+sim3_summary = read_csv("ParameterRecovery_2/sim3_summary.RDS")
+sim4_summary = read_csv("ParameterRecovery_2/sim4_summary.RDS")
+sim5_summary = read_csv("ParameterRecovery_2/sim5_summary.RDS")
+sim6_summary = read_csv("ParameterRecovery_2/sim6_summary.RDS")
+sim7_summary = read_csv("ParameterRecovery_2/sim7_summary.RDS")
+sim8_summary = read_csv("ParameterRecovery_2/sim8_summary.RDS")
+sim9_summary = read_csv("ParameterRecovery_2/sim9_summary.RDS")
+sim10_summary = read_csv("ParameterRecovery_2/sim10_summary.RDS")
+
+Rhat_max = c()
+Rhat_min = c()
+for (i in 1:10){
+# Get the approprirate samples object read in and summarized. (indexed by i)
+# fit <- readRDS(temp_rds_file)
+  filename = paste("ParameterRecovery_2", "/sim", i, "_summary.RDS", sep = "")
+  
+  summary = read_csv(filename)
+  
+  Rhat = range(summary$rhat)
+  
+  Rhat_max = c(Rhat_max, Rhat[2])
+  Rhat_min = c(Rhat_min, Rhat[1])
+}
+
+table = tibble("Simulation" = c(1:10), "Rhat_min" = Rhat_min, "Rhat_max" = Rhat_max)
+write_csv(table, "ParameterRecovery_2/ConvergenceTable.csv")
+
+
+parameters_transposed = parameters %>% as.matrix() %>% t() %>% as.data.frame()
+
+colnames(parameters_transposed) = c("mu_beta_1_real"," sigma_beta_1_real", "mu_beta_1_surrogate", "sigma_beta_1_surrogate",
+                                     "mu_beta_2_real", "sigma_beta_2_real", "mu_beta_2_surrogate", "sigma_beta_2_surrogate")
+
+parameters_transposed %>% write_csv("ParameterRecovery/parameters_transposed.csv")
+```

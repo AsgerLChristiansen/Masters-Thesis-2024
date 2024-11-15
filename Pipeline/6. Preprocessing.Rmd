@@ -1,0 +1,448 @@
+---
+title: "Preprocessing for Stan Analysis"
+author: "Asger"
+date: "11/9/2024"
+output: html_document
+---
+
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+pacman::p_load(pacman, tidyverse, stringr, posterior, cmdstanr)
+
+source("src/Coherence Analysis Functions.R")
+```
+
+
+
+```{r Data Cleanup}
+
+CoherenceLong = read_csv("temp/CoherenceLong.csv")
+
+
+
+CoherenceLong$pair =CoherenceLong$pair %>% as.factor() %>% factor(levels=c('1', '2', '3'
+                                                                ,
+                                                                '4',
+                                                                "5",
+                                                                "6",
+                                                                "7",
+                                                                "8",
+                                                                "9",
+                                                                "10",
+                                                                "11",
+                                                                "12",
+                                                                "13",
+                                                                "14",
+                                                                "16",
+                                                                "17",
+                                                                "18",
+                                                                "19",
+                                                                "20",
+                                                                "21",
+                                                                "22",
+                                                                "23",
+                                                                "Surrogate1",
+                                                                "Surrogate2",
+                                                                "Surrogate3",
+                                                                "Surrogate4",
+                                                                "Surrogate5",
+                                                                "Surrogate6",
+                                                                "Surrogate7",
+                                                                "Surrogate8",
+                                                                "Surrogate9",
+                                                                "Surrogate10",
+                                                                "Surrogate11",
+                                                                "Surrogate12",
+                                                                "Surrogate13",
+                                                                "Surrogate14",
+                                                                "Surrogate15",
+                                                                "Surrogate16",
+                                                                "Surrogate17",
+                                                                "Surrogate18",
+                                                                "Surrogate19",
+                                                                "Surrogate20",
+                                                                "Surrogate21",
+                                                                "Surrogate22"))
+
+
+
+
+CoherenceLong$visit = CoherenceLong$visit %>% as.factor() %>% factor(levels = c(
+  "1", "4"
+)) # 1,4 -> 1, 2 -> 0, 1
+
+
+
+CoherenceLong$pair = dummy_code(CoherenceLong$pair)  # First 22 are real, last 22 are surrogate
+CoherenceLong$visit = dummy_code(CoherenceLong$visit) # 1 is 1, 2 is 4
+
+CoherenceLong$surrogate =  ifelse(as.numeric(CoherenceLong$pair) < 23, 0, 1)
+
+CoherenceLong$condition = ifelse(CoherenceLong$condition == "rest_avg", 0, 1)
+
+all_channels = c(
+  'S1_D1 hbo', 'S1_D1 hbr', 'S1_D2 hbo', 'S1_D2 hbr', 'S1_D3 hbo', 'S1_D3 hbr', 'S2_D1 hbo', 'S2_D1 hbr', 'S2_D4 hbo', 'S2_D4 hbr', 'S3_D1 hbo', 'S3_D1 hbr', 'S3_D3 hbo', 'S3_D3 hbr', 'S3_D4 hbo', 'S3_D4 hbr', 'S4_D4 hbo', 'S4_D4 hbr', 'S4_D5 hbo', 'S4_D5 hbr', 'S4_D10 hbo', 'S4_D10 hbr', 'S5_D2 hbo', 'S5_D2 hbr', 'S5_D3 hbo', 'S5_D3 hbr', 'S5_D7 hbo', 'S5_D7 hbr', 'S6_D2 hbo', 'S6_D2 hbr', 'S6_D7 hbo', 'S6_D7 hbr', 'S7_D3 hbo', 'S7_D3 hbr', 'S7_D5 hbo', 'S7_D5 hbr', 'S7_D6 hbo', 'S7_D6 hbr', 'S7_D8 hbo', 'S7_D8 hbr', 'S8_D6 hbo', 'S8_D6 hbr', 'S8_D7 hbo', 'S8_D7 hbr', 'S8_D16 hbo', 'S8_D16 hbr', 'S9_D4 hbo', 'S9_D4 hbr', 'S9_D9 hbo', 'S9_D9 hbr', 'S10_D4 hbo', 'S10_D4 hbr', 'S10_D9 hbo', 'S10_D9 hbr', 'S10_D10 hbo', 'S10_D10 hbr', 'S10_D11 hbo', 'S10_D11 hbr', 'S11_D5 hbo', 'S11_D5 hbr', 'S11_D8 hbo', 'S11_D8 hbr', 'S11_D10 hbo', 'S11_D10 hbr', 'S12_D9 hbo', 'S12_D9 hbr', 'S12_D11 hbo', 'S12_D11 hbr', 'S12_D12 hbo', 'S12_D12 hbr', 'S13_D10 hbo', 'S13_D10 hbr', 'S13_D11 hbo', 'S13_D11 hbr', 'S13_D13 hbo', 'S13_D13 hbr', 'S14_D11 hbo', 'S14_D11 hbr', 'S14_D12 hbo', 'S14_D12 hbr', 'S14_D13 hbo', 'S14_D13 hbr', 'S14_D14 hbo', 'S14_D14 hbr', 'S15_D12 hbo', 'S15_D12 hbr', 'S15_D14 hbo', 'S15_D14 hbr', 'S15_D15 hbo', 'S15_D15 hbr', 'S16_D13 hbo', 'S16_D13 hbr', 'S16_D14 hbo', 'S16_D14 hbr', 'S17_D7 hbo', 'S17_D7 hbr', 'S17_D17 hbo', 'S17_D17 hbr', 'S18_D6 hbo', 'S18_D6 hbr', 'S18_D8 hbo', 'S18_D8 hbr', 'S18_D16 hbo', 'S18_D16 hbr', 'S19_D7 hbo', 'S19_D7 hbr', 'S19_D16 hbo', 'S19_D16 hbr', 'S19_D17 hbo', 'S19_D17 hbr', 'S19_D18 hbo', 'S19_D18 hbr', 'S20_D16 hbo', 'S20_D16 hbr', 'S20_D18 hbo', 'S20_D18 hbr', 'S20_D19 hbo', 'S20_D19 hbr', 'S21_D17 hbo', 'S21_D17 hbr', 'S21_D18 hbo', 'S21_D18 hbr', 'S21_D20 hbo', 'S21_D20 hbr', 'S22_D18 hbo', 'S22_D18 hbr', 'S22_D19 hbo', 'S22_D19 hbr', 'S22_D20 hbo', 'S22_D20 hbr', 'S22_D21 hbo', 'S22_D21 hbr', 'S23_D19 hbo', 'S23_D19 hbr', 'S23_D21 hbo', 'S23_D21 hbr', 'S24_D20 hbo', 'S24_D20 hbr', 'S24_D21 hbo', 'S24_D21 hbr', 'S24_D22 hbo', 'S24_D22 hbr'
+)
+
+hbo_channels = c(
+  'S1_D1 hbo',  'S1_D2 hbo',  'S1_D3 hbo',  'S2_D1 hbo', 'S2_D4 hbo',  'S3_D1 hbo',  'S3_D3 hbo',  'S3_D4 hbo',  'S4_D4 hbo', 'S4_D5 hbo',  'S4_D10 hbo', 'S5_D2 hbo',  'S5_D3 hbo', 'S5_D7 hbo',  'S6_D2 hbo',  'S6_D7 hbo',  'S7_D3 hbo',  'S7_D5 hbo',  'S7_D6 hbo',  'S7_D8 hbo', 'S8_D6 hbo',  'S8_D7 hbo',  'S8_D16 hbo',  'S9_D4 hbo', 'S9_D9 hbo',  'S10_D4 hbo',  'S10_D9 hbo',  'S10_D10 hbo', 'S10_D11 hbo',  'S11_D5 hbo',  'S11_D8 hbo',  'S11_D10 hbo',  'S12_D9 hbo',  'S12_D11 hbo', 'S12_D12 hbo',  'S13_D10 hbo',  'S13_D11 hbo',  'S13_D13 hbo', 'S14_D11 hbo', 'S14_D12 hbo', 'S14_D13 hbo',  'S14_D14 hbo',  'S15_D12 hbo',  'S15_D14 hbo',  'S15_D15 hbo',  'S16_D13 hbo', 'S16_D14 hbo',  'S17_D7 hbo',  'S17_D17 hbo',  'S18_D6 hbo', 'S18_D8 hbo',  'S18_D16 hbo',  'S19_D7 hbo',  'S19_D16 hbo',  'S19_D17 hbo', 'S19_D18 hbo', 'S20_D16 hbo',  'S20_D18 hbo',  'S20_D19 hbo',  'S21_D17 hbo',  'S21_D18 hbo', 'S21_D20 hbo',  'S22_D18 hbo',  'S22_D19 hbo', 'S22_D20 hbo',  'S22_D21 hbo',  'S23_D19 hbo',  'S23_D21 hbo',  'S24_D20 hbo',  'S24_D21 hbo', 'S24_D22 hbo')
+
+
+hbr_channels = c('S1_D1 hbr',  'S1_D2 hbr',  'S1_D3 hbr',  'S2_D1 hbr', 'S2_D4 hbr',  'S3_D1 hbr',  'S3_D3 hbr',  'S3_D4 hbr',  'S4_D4 hbr', 'S4_D5 hbr',  'S4_D10 hbr', 'S5_D2 hbr',  'S5_D3 hbr', 'S5_D7 hbr',  'S6_D2 hbr',  'S6_D7 hbr',  'S7_D3 hbr',  'S7_D5 hbr',  'S7_D6 hbr',  'S7_D8 hbr', 'S8_D6 hbr',  'S8_D7 hbr',  'S8_D16 hbr',  'S9_D4 hbr', 'S9_D9 hbr',  'S10_D4 hbr',  'S10_D9 hbr',  'S10_D10 hbr', 'S10_D11 hbr',  'S11_D5 hbr',  'S11_D8 hbr',  'S11_D10 hbr',  'S12_D9 hbr',  'S12_D11 hbr', 'S12_D12 hbr',  'S13_D10 hbr',  'S13_D11 hbr',  'S13_D13 hbr', 'S14_D11 hbr', 'S14_D12 hbr', 'S14_D13 hbr',  'S14_D14 hbr',  'S15_D12 hbr',  'S15_D14 hbr',  'S15_D15 hbr',  'S16_D13 hbr', 'S16_D14 hbr',  'S17_D7 hbr',  'S17_D17 hbr',  'S18_D6 hbr', 'S18_D8 hbr',  'S18_D16 hbr',  'S19_D7 hbr',  'S19_D16 hbr',  'S19_D17 hbr', 'S19_D18 hbr', 'S20_D16 hbr',  'S20_D18 hbr',  'S20_D19 hbr',  'S21_D17 hbr',  'S21_D18 hbr', 'S21_D20 hbr',  'S22_D18 hbr',  'S22_D19 hbr', 'S22_D20 hbr',  'S22_D21 hbr',  'S23_D19 hbr',  'S23_D21 hbr',  'S24_D20 hbr',  'S24_D21 hbr', 'S24_D22 hbr')
+
+
+CoherenceHbo = CoherenceLong %>% filter(channel %in% hbo_channels)
+
+CoherenceHbr = CoherenceLong %>% filter(channel  %in% hbr_channels)
+
+
+CoherenceHbo$channel = CoherenceHbo$channel  %>% as.factor() %>% factor(levels = hbo_channels)
+
+CoherenceHbr$channel = CoherenceHbr$channel  %>% as.factor() %>% factor(levels = hbr_channels)
+
+DummyCodedChannels = data.frame("Montage Designation" = levels(CoherenceHbo$channel), "Dummy Code" = levels(dummy_code(CoherenceHbo$channel)))
+
+write.csv(DummyCodedChannels, "temp/DummyCodedChannels.csv")
+
+
+CoherenceHbo$channel = dummy_code(CoherenceHbo$channel) 
+CoherenceHbr$channel = dummy_code(CoherenceHbr$channel)
+
+
+CoherenceHbr %>% select(surrogate, pair, channel, visit, condition, coherence) %>% write_csv("temp/CoherenceHbr.csv")
+
+CoherenceHbo %>% select(surrogate, pair, channel, visit, condition, coherence) %>% write_csv("temp/CoherenceHbo.csv")
+
+
+```
+
+
+Due to arima errors in the coherence estimation, we have:
+
+HBR
+Missing Visit 2 Hbr Data from:
+
+Real Pairs:
+- Pair 3, channel 66 and 68.
+- pair 8, channel 29.
+
+Surrogate pairs:
+- Pair 25, channels 66 and 68.
+- Pair 30, channel 29.
+
+
+
+
+
+
+
+
+HBO
+Missing Visit 2 Hbo Data from:
+
+Real Pairs:
+- Pair 3, channels 66 and 68
+
+Surrogate pairs:
+- Pair 25, channels 66, 68, and 70
+
+
+Coherence for these channels is set to EXACTLY ZERO.
+An if statement in the stan model means it will not
+try to model these channels.
+
+
+```{r Data Cleanup Continued}
+# Identify missing data
+CoherenceHbo = read_csv("temp/CoherenceHbo.csv")
+CoherenceHbr = read_csv("temp/CoherenceHbr.csv")
+
+CoherenceHbr %>% group_by(pair, channel) %>% summarize(visit, surrogate, n() )
+
+CoherenceHbo %>% group_by(pair, channel) %>% summarize(visit, surrogate, n() )
+
+
+# Manually create missing data, setting coherence to 0.
+
+missing_data_hbr = data.frame(
+  "surrogate" = c(0,0,0,0,0,0, 1,1,1,1,1,1),
+  "pair" = c(3,3,3,3,8,8,25,25,25,25, 30, 30),
+  channel = c(66,66,68,68,29,29, 66,66,68,68,29,29),
+  visit = c(rep(2, 12)),
+  condition = c(rep(c(0,1),6)),
+  coherence = c(rep(0,12)))
+
+
+
+missing_data_hbo = data.frame(
+  "surrogate" = c(0,0,0,0,1,1,1,1,1,1),
+  "pair" = c(3,3,3,3,25,25,25,25,25,25),
+  channel = c(66,66,68,68,66,66,68,68,70,70),
+  visit = c(rep(2, 10)),
+  condition = c(rep(c(0,1),5)),
+  coherence = c(rep(0,10))
+  
+  
+)
+
+# Rbinding missing data
+
+padded_data_hbo = rbind(CoherenceHbo, missing_data_hbo)
+
+padded_data_hbr = rbind(CoherenceHbr, missing_data_hbr)
+
+padded_data_hbo = padded_data_hbo %>% arrange(pair, channel, condition, visit)
+
+
+padded_data_hbr = padded_data_hbr %>% arrange(pair, channel, condition, visit)
+
+
+
+# Sanity check
+
+sanity_check = function(dataset){
+  
+N_channels = as.numeric(length(unique(dataset$channel)))
+N_visits = as.numeric(length(unique(dataset$visit)))
+N_pairs = as.numeric(length(unique(dataset$pair)))
+N_pairs_real = N_pairs/2
+N_pairs_surrogate = N_pairs/2
+N_conditions = as.numeric(length(unique(dataset$condition)))
+
+
+data_array = array(data = NA, dim = c(N_visits, N_conditions, N_channels, N_pairs))
+
+row = 0
+  for (p in 1:N_pairs){
+  for (ch in 1:N_channels){
+  for (c in 1:N_conditions){ 
+  for (v in 1:N_visits){
+    row = row +1
+    data_array[v,c,ch, p] = dataset$coherence[row]
+    
+  }}}}
+  print("Are there any missing rows?")
+  print(any(is.na(data_array)))
+  print("Sum of missing rows:")
+  print(sum(is.na(data_array)))
+}
+
+
+sanity_check(padded_data_hbo)
+sanity_check(padded_data_hbr)
+
+write_csv(padded_data_hbo, "temp/CoherenceHboPadded.csv")
+write_csv(padded_data_hbr, "temp/CoherenceHbrPadded.csv")
+
+
+
+```
+
+```{r Filter out irrelevant channels}
+
+padded_data_hbo = read_csv("temp/CoherenceHboPadded.csv")
+padded_data_hbr = read_csv("temp/CoherenceHbrPadded.csv")
+
+# based on literature, we've selected the following channels to actually be relevant:
+
+relevant_channels = c("S1_D1",
+"S1_D2",
+"S1_D3",
+"S2_D1",
+"S2_D4",
+"S3_D1",
+"S3_D3",
+"S3_D4",
+"S4_D4",
+"S4_D5",
+"S4_D10",
+"S5_D2",
+"S5_D3",
+"S5_D7",
+"S6_D2",
+"S6_D7",
+"S7_D3",
+"S7_D5",
+"S7_D6",
+"S8_D6",
+"S8_D7",
+"S8_D16",
+"S9_D4",
+"S10_D4",
+"S11_D5",
+"S14_D13",
+"S14_D14",
+"S16_D13",
+"S18_D6",
+"S19_D7",
+"S22_D19",
+"S22_D21",
+"S23_D19")
+
+
+
+
+relevant_channels_hbr =  paste(relevant_channels, " hbr", sep = "")
+relevant_channels_hbo = paste(relevant_channels, " hbo", sep = "")
+
+
+
+DummyCodedChannels = read_csv("temp/DummyCodedChannels.csv")
+
+relevant_channels_dummy = (DummyCodedChannels %>% filter(Montage.Designation %in% relevant_channels_hbo))$Dummy.Code
+
+
+relevant_hbo = padded_data_hbo %>% filter(channel %in% relevant_channels_dummy)
+
+relevant_hbr = padded_data_hbr %>% filter(channel  %in% relevant_channels_dummy)
+
+write_csv(relevant_hbo, "temp/RelevantHbo.csv")
+write_csv(relevant_hbr, "temp/RelevantHbr.csv")
+
+
+```
+
+
+
+
+
+
+
+```{r Data Exploration to find sensible priors}
+
+RelevantHbo = read_csv("temp/RelevantHbo.csv") %>% filter(coherence != 0)
+RelevantHbr = read_csv( "temp/RelevantHbr.csv") %>% filter(coherence != 0)
+p_load(LaplacesDemon)
+
+explore_data = function(dataset){
+  
+print("Mean coherence:")
+mean(c(dataset$coherence)) %>% print() 
+print("Standard deviation of coherence:")
+sd(dataset$coherence)%>% print()  
+print("Range of coherence:")
+range(dataset$coherence)%>% print() 
+
+
+print("Mean logit-transformed coherence:")
+mean(logit(c(dataset$coherence))) %>% print() #-0.8357877
+print("Standard deviation of logit-transformed coherence:")
+sd(logit(dataset$coherence)) %>% print() #0.3587508
+print("Range of logit-transformed coherence:")
+range(logit(dataset$coherence)) %>% print() # -2.6318984  0.8363457
+
+}
+
+
+ggplot(RelevantHbo, aes(x=logit(coherence))) + geom_histogram() 
+
+
+ggplot(RelevantHbo, aes(x=logit(coherence))) + geom_histogram() + facet_wrap(~pair)
+
+
+```
+
+```{r}
+
+explore_data(RelevantHbo)
+
+# 
+# ggplot(RelevantHbo, aes(x=logit(coherence))) + geom_histogram() 
+# 
+# 
+# ggplot(RelevantHbo, aes(x=logit(coherence))) + geom_histogram() + facet_wrap(~surrogate)
+# ggplot(RelevantHbo, aes(x=logit(coherence))) + geom_histogram() + facet_wrap(~visit)
+# ggplot(RelevantHbo, aes(x=logit(coherence))) + geom_histogram() + facet_wrap(~condition)
+
+
+ggplot(RelevantHbo)  +
+  geom_histogram(aes(x=logit(coherence)), binwidth = 0.05, color = "black", fill = "blue", alpha = 0.3) +
+  geom_vline(xintercept = 0, size = 2) +
+  xlab("Coherence") +
+  ylab("Count")+ xlim(c(-3, 1)) +
+  theme_classic()+ ggtitle("Oxyhaemoglobin Coherence Data Distribution (Logit Transformed)")
+paste("Plots", "/", "OxyHistogram", ".png", sep = "") %>% ggsave()
+
+
+```
+Mean coherence:
+  0.3075459
+
+Standard deviation of coherence:
+  0.07374057
+
+Range of coherence:
+  0.06711349 0.69769503
+
+Mean logit-transformed coherence:
+  -0.8357877
+
+Standard deviation of logit-transformed coherence:
+  0.3587508
+
+Range of logit-transformed coherence:
+  -2.6318984  0.8363457
+
+```{r}
+explore_data(RelevantHbr)
+# 
+# 
+# 
+# ggplot(RelevantHbr, aes(x=logit(coherence))) + geom_histogram() 
+# 
+# 
+# ggplot(RelevantHbr, aes(x=logit(coherence))) + geom_histogram() + facet_wrap(~surrogate)
+# ggplot(RelevantHbr, aes(x=logit(coherence))) + geom_histogram() + facet_wrap(~visit)
+# ggplot(RelevantHbr, aes(x=logit(coherence))) + geom_histogram() + facet_wrap(~condition)
+
+
+ggplot(RelevantHbr)  +
+  geom_histogram(aes(x=logit(coherence)), binwidth = 0.05, color = "black", fill = "blue", alpha = 0.3) +
+  geom_vline(xintercept = 0, size = 2) +
+  xlab("Coherence") +
+  ylab("Count") + xlim(c(-3, 1)) +
+  theme_classic()+ ggtitle("Deoxyhaemoglobin Coherence Data Distribution (Logit Transformed)")
+paste("Plots", "/", "DeoxyHistogram", ".png", sep = "") %>% ggsave()
+
+
+```
+Mean coherence:
+  0.303053
+
+Standard deviation of coherence:
+  0.07643093
+
+Range of coherence:
+  0.08681726 0.69760416
+
+Mean logit-transformed coherence:
+  -0.8599218
+
+Standard deviation of logit-transformed coherence:
+  0.3757122
+
+Range of logit-transformed coherence:
+  -2.3531305  0.8359149
+  
+  
+```{r}
+
+
+
+
+set.seed(1337)
+ggplot(data.frame("Gamma" = c(sample(rgamma(1000,1,3),1000))))  +
+  geom_histogram(aes(x=Gamma), binwidth = 0.05, color = "black", fill = "red", alpha = 0.3) +
+  xlab("Sample Value") +
+  ylab("Count")+ 
+  theme_classic()+ ggtitle("1000 Random Samples from Gamma Distribution")
+paste("Plots", "/", "Gamma_Distribution_Plot", ".png", sep = "") %>% ggsave()
+
+
+
+
+
+```
+

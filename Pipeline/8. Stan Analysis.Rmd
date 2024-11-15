@@ -1,0 +1,88 @@
+---
+title: "Stan Analysis"
+author: "Asger"
+date: "11/9/2024"
+output: html_document
+---
+
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+pacman::p_load(pacman, tidyverse, stringr, posterior, cmdstanr, tidybayes)
+
+source("src/Coherence Analysis Functions.R")
+
+
+```
+
+
+
+
+
+```{r Analysis}
+
+RelevantHbo = read_csv("temp/RelevantHbo.csv")
+RelevantHbr = read_csv("temp/RelevantHbr.csv") 
+# What to do about missing data?
+
+HboDataArray =prepare_for_analysis(RelevantHbo)
+HbrDataArray =prepare_for_analysis(RelevantHbr)
+
+
+
+file_coherence <- file.path("Stan Code/coherence_over_time.stan")
+
+mod_coherence <- cmdstan_model(file_coherence,
+                     cpp_options= list(stan_threads= TRUE),stanc_options= list("O1"))
+# 
+a =fit_to_data(HboDataArray, stan_model = mod_coherence, chains = 1, parallel_chains = 1, iter_warmup = 100, iter_sampling = 150, filename = "wtf", directory = "Dump", refresh = 15)
+
+
+
+####### HBO  
+
+
+samples_hbo = fit_to_data(HboDataArray, mod_coherence, chains = 3, parallel_chains = 3, iter_warmup = 1000, iter_sampling = 1000, filename = "hbo", directory = "Results", refresh = 15)
+
+draws_df <- as_draws_df(samples_hbo$draws())
+write_csv(draws_df, "Results/draws_hbo.csv")
+
+summary = samples_hbo$summary()
+write_csv(summary, "Results/summary_hbo.csv")
+
+samples_hbo$save_object(file = "Results/samples_hbo.RDS" )
+  
+
+
+samples_hbo = fit_to_data(HboDataArray, mod_coherence, chains = 3, parallel_chains = 3, iter_warmup = 1000, iter_sampling = 1000, filename = "hbo", directory = "Results", refresh = 15)
+
+draws_df <- as_draws_df(samples_hbo$draws())
+write_csv(draws_df, "Results/draws_hbo.csv")
+
+summary = samples_hbo$summary()
+write_csv(summary, "Results/summary_hbo.csv")
+
+samples_hbo$save_object(file = "Results/samples_hbo.RDS" )
+
+
+
+
+
+######  HBR
+
+  
+
+samples_hbr = fit_to_data(HbrDataArray, mod_coherence, chains = 3, parallel_chains = 3, iter_warmup = 1000, iter_sampling = 1000, filename = "hbr", directory = "Results", refresh = 15)
+
+
+
+draws_df <- as_draws_df(samples_hbr$draws())
+write_csv(draws_df, "Results/draws_hbr.csv")
+
+summary = samples_hbr$summary()
+write_csv(summary, "Results/summary_hbr.csv")
+samples_hbr$save_object(file = "Results/samples_hbr.RDS" )
+
+```
+

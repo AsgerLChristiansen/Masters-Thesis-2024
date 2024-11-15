@@ -1,0 +1,271 @@
+---
+title: "Results and Plots"
+author: "Asger"
+date: "11/9/2024"
+output: html_document
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+pacman::p_load(pacman, tidyverse, stringr, posterior, cmdstanr, tidybayes)
+ 
+source("src/Coherence Analysis Functions.R")
+
+
+```
+
+
+```{r HBR}
+
+pacman::p_load(pacman, tidyverse, stringr, posterior, cmdstanr, tidybayes, bayestestR, LaplacesDemon)
+
+
+# Load data, spread draws  
+hbr_draws = read_csv("Results/draws_hbr.csv")
+
+dataframe = hbr_draws
+
+
+  
+  
+########### DATA WRANGLING #####################  
+
+hbr_beta_1 = hbr_draws %>%  spread_draws( beta_1[N_conditions, N_channels, N_pairs])
+hbr_beta_2 = hbr_draws %>%  spread_draws( beta_2[N_conditions, N_channels, N_pairs])
+hbr_results = cbind(hbr_beta_2, hbr_beta_1[,4])
+remove(hbr_draws)
+
+
+# Comment this out if you want it in logit scale
+hbr_results =convert_to_coherence(dataframe = hbr_results, column_indeces = c(4,8))
+
+
+
+# Calculate difference between beta 1 and beta 2, sample-wise.
+hbr_results$beta_change = hbr_results$beta_2 - hbr_results$beta_1
+
+# Add surrogate column
+hbr_results$surrogate = ifelse(hbr_results$N_pairs %in% c(1:22), "real", "surrogate")
+
+# Makes the data 22 times smaller.
+pairwise_average_samples = hbr_results %>% group_by(.draw, N_conditions, N_channels, surrogate) %>% summarize(mean(beta_1), mean(beta_2), mean(beta_change))
+
+
+colnames(pairwise_average_samples) =c(
+  ".draw" , "N_conditions","N_channels" ,"surrogate" , "mean_beta_1"  ,    "mean_beta_2",  "mean_beta_change"
+)
+
+sanity_results_task = sanity_check(pairwise_average_samples, condition = 2)
+write_csv(sanity_results_task, "Results/hbr/pairtype_comparison_task_hbr.csv")
+sanity_results_rest = sanity_check(pairwise_average_samples, condition = 1)
+write_csv(sanity_results_rest, "Results/hbr/pairtype_comparison_rest_hbr.csv")
+
+
+
+real_condition_comparison = compare_conditions(pairwise_average_samples, surrogate = "real")
+write_csv(real_condition_comparison, "Results/hbr/condition_comparison_real_hbr.csv")
+surrogate_condition_comparison = compare_conditions(pairwise_average_samples, surrogate = "surrogate")
+write_csv(surrogate_condition_comparison, "Results/hbr/condition_comparison_surrogate_hbr.csv")
+
+
+############# PLOTS #####################
+
+
+# Example Density plot for thesis
+example_plot_df = data.frame(
+  
+  "real_channel_1_rest" = (pairwise_average_samples %>%
+filter(N_channels == 1, surrogate =="real", N_conditions == 1))$mean_beta_1,
+
+  "real_channel_1_convo" = (pairwise_average_samples %>%
+filter(N_channels == 1, surrogate =="real", N_conditions == 2))$mean_beta_1
+
+)
+
+example_plot_df$diff = example_plot_df$real_channel_1_convo - example_plot_df$real_channel_1_rest 
+
+
+
+  example_plot_df %>% 
+    ggplot() +  geom_density(aes(real_channel_1_rest), color = "black", fill = "blue", alpha = 0.3) +
+    geom_density(aes(real_channel_1_convo), color = "black", fill = "red", alpha = 0.3) +
+    xlim(0.2, .4) +
+  xlab("Coherence") +
+  ylab("Density")+ 
+  theme_classic()+ ggtitle("Mean Deoxy-Coherence in Channel 1, real pairs. Rest (blue), conv. (red)")
+paste("Plots", "/", "Example_Density_Plot_1", ".png", sep = "") %>% ggsave()
+
+
+
+
+  example_plot_df %>% 
+    ggplot() +  geom_density(aes(diff), color = "black", fill = "blue", alpha = 0.3) +
+  geom_vline(xintercept = 0, size = 2) +
+  xlab("Coherence Difference") +
+  ylab("Density")+ 
+  theme_classic()+ ggtitle("Mean Deoxy-Coherence difference between conditions in Channel 1")
+paste("Plots", "/", "Example_Density_Plot_2", ".png", sep = "") %>% ggsave()
+
+
+
+
+# mu_beta_1_real
+dataframe %>% ggplot() +
+  geom_density(aes(mu_beta_1_real), fill = "blue", alpha = 0.3) +
+  geom_density(aes(mu_beta_1_real_prior), fill = "red", alpha = 0.3) +
+  ylab("Density") +
+  theme_classic()+ ggtitle(expression(paste("Prior-Posterior Comparison - Average Visit 1 Coherence in Real Pairs (", mu,beta[0]^1,  ") "))) +
+  xlab("Parameter Value")
+  parameter = "mu_beta_1_real_hbr"
+  paste("Plots", "/", parameter, ".png", sep = "") %>% ggsave()
+
+
+#mu_beta_1_surrogate_prior and  mu_beta_2_real_prior were switched around in the stan code by accident.
+
+#mu_beta_2_real
+dataframe %>% ggplot() +
+  geom_density(aes(mu_beta_2_real), fill = "blue", alpha = 0.3) +
+  #geom_density(aes(mu_beta_2_real_prior), fill = "red", alpha = 0.3) +
+  geom_density(aes(mu_beta_1_surrogate_prior), fill = "red", alpha = 0.3) +
+  geom_vline(xintercept = 0, size = 2)  +
+  ylab("Density") +
+  theme_classic()+ ggtitle(expression(paste("Prior-Posterior Comparison - Average Visit 4 Coherence in Real Pairs (", mu,beta[0]^2,  ") "))) +
+  xlab("Parameter Value")
+  parameter = "mu_beta_2_real_hbr"
+  paste("Plots", "/", parameter, ".png", sep = "") %>% ggsave()
+
+
+
+
+#mu_beta_1_surrogate
+dataframe %>% ggplot() +
+  geom_density(aes(mu_beta_1_surrogate), fill = "blue", alpha = 0.3) +
+  #geom_density(aes(mu_beta_1_surrogate_prior), fill = "red", alpha = 0.3) +
+  geom_density(aes(mu_beta_2_real_prior), fill = "red", alpha = 0.3) +
+  geom_vline(xintercept = 0, size = 2)  +
+  ylab("Density") +
+  theme_classic()+ ggtitle(expression(paste("Prior-Posterior Comparison - Average Visit 1 Coherence in Surrogate Pairs (", mu,beta[1]^1,  ") "))) +
+  xlab("Parameter Value")
+  parameter = "mu_beta_1_surrogate_hbr"
+  paste("Plots", "/", parameter, ".png", sep = "") %>% ggsave()
+
+
+#mu_beta_2_surrogate
+dataframe %>% ggplot() +
+  geom_density(aes(mu_beta_2_surrogate), fill = "blue", alpha = 0.3) +
+  geom_density(aes(mu_beta_2_surrogate_prior), fill = "red", alpha = 0.3) +
+  geom_vline(xintercept = 0, size = 2)  +
+  ylab("Density") +
+  theme_classic()+ ggtitle(expression(paste("Prior-Posterior Comparison - Average Visit 4 Coherence in Surrogate Pairs (", mu,beta[1]^2,  ") "))) +
+  xlab("Parameter Value")
+  parameter = "mu_beta_2_surrogate_hbr"
+  paste("Plots", "/", parameter, ".png", sep = "") %>% ggsave()
+
+
+
+```
+
+
+
+```{r HBO}
+
+pacman::p_load(pacman, tidyverse, stringr, posterior, cmdstanr, tidybayes, bayestestR, LaplacesDemon)
+
+
+# Load data, spread draws  
+hbo_draws = read_csv("Results/draws_hbo.csv")
+
+
+dataframe = hbo_draws
+
+# mu_beta_1_real
+dataframe %>% ggplot() +
+  geom_density(aes(mu_beta_1_real), fill = "blue", alpha = 0.3) +
+  geom_density(aes(mu_beta_1_real_prior), fill = "red", alpha = 0.3) +
+  geom_vline(xintercept = 0, size = 2)  +
+  ylab("Density") +
+  theme_classic()+ ggtitle(expression(paste("Prior-Posterior Comparison - Average Visit 1 Coherence in Real Pairs (", mu,beta[0]^1,  ") "))) +
+  xlab("Parameter Value")
+  parameter = "mu_beta_1_real_hbo"
+  paste("Plots", "/", parameter, ".png", sep = "") %>% ggsave()
+
+
+
+#mu_beta_2_real
+dataframe %>% ggplot() +
+  geom_density(aes(mu_beta_2_real), fill = "blue", alpha = 0.3) +
+  #geom_density(aes(mu_beta_2_real_prior), fill = "red", alpha = 0.3) +
+  geom_density(aes(mu_beta_2_surrogate_prior), fill = "red", alpha = 0.3) +
+  geom_vline(xintercept = 0, size = 2)  +
+  ylab("Density") +
+  theme_classic()+ ggtitle(expression(paste("Prior-Posterior Comparison - Average Visit 4 Coherence in Real Pairs (", mu,beta[0]^2,  ") "))) +
+  xlab("Parameter Value")
+  parameter = "mu_beta_2_real_hbo"
+  paste("Plots", "/", parameter, ".png", sep = "") %>% ggsave()
+
+
+
+
+#mu_beta_1_surrogate_prior and  mu_beta_2_real_prior were switched around in the stan code by accident.
+
+#mu_beta_1_surrogate
+dataframe %>% ggplot() +
+  geom_density(aes(mu_beta_1_surrogate), fill = "blue", alpha = 0.3) +
+  #geom_density(aes(mu_beta_1_surrogate_prior), fill = "red", alpha = 0.3) +
+  geom_density(aes(mu_beta_2_real_prior), fill = "red", alpha = 0.3) +
+  geom_vline(xintercept = 0, size = 2)  +
+  ylab("Density") +
+  theme_classic()+ ggtitle(expression(paste("Prior-Posterior Comparison - Average Visit 1 Coherence in Surrogate Pairs (", mu,beta[1]^1,  ") "))) +
+  xlab("Parameter Value")
+  parameter = "mu_beta_1_surrogate_hbo"
+  paste("Plots", "/", parameter, ".png", sep = "") %>% ggsave()
+
+
+#mu_beta_2_surrogate
+dataframe %>% ggplot() +
+  geom_density(aes(mu_beta_2_surrogate), fill = "blue", alpha = 0.3) +
+  geom_density(aes(mu_beta_2_surrogate_prior), fill = "red", alpha = 0.3) +
+  geom_vline(xintercept = 0, size = 2)+
+  ylab("Density") +
+  theme_classic()+ ggtitle(expression(paste("Prior-Posterior Comparison - Average Visit 4 Coherence in Surrogate Pairs (", mu,beta[1]^2,  ") "))) +
+  xlab("Parameter Value")
+  parameter = "mu_beta_2_surrogate_hbo"
+  paste("Plots", "/", parameter, ".png", sep = "") %>% ggsave()
+
+
+
+hbo_beta_1 = hbo_draws %>%  spread_draws( beta_1[N_conditions, N_channels, N_pairs])
+hbo_beta_2 = hbo_draws %>%  spread_draws( beta_2[N_conditions, N_channels, N_pairs])
+hbo_results = cbind(hbo_beta_2, hbo_beta_1[,4])
+hbo_results =convert_to_coherence(dataframe = hbo_results, column_indeces = c(4,8))
+
+# Calculate difference between beta 1 and beta 2, sample-wise.
+hbo_results$beta_change = hbo_results$beta_2 - hbo_results$beta_1
+
+# Add surrogate column
+hbo_results$surrogate = ifelse(hbo_results$N_pairs %in% c(1:22), "real", "surrogate")
+
+# Makes the data 22 times smaller.
+pairwise_average_samples = hbo_results %>% group_by(.draw, N_conditions, N_channels, surrogate) %>% summarize(mean(beta_1), mean(beta_2), mean(beta_change))
+
+
+colnames(pairwise_average_samples) =c(
+  ".draw" , "N_conditions","N_channels" ,"surrogate" , "mean_beta_1"  ,    "mean_beta_2",  "mean_beta_change"
+)
+
+
+
+sanity_results_task = sanity_check(pairwise_average_samples, condition = 2)
+write_csv(sanity_results_task, "Results/hbo/pairtype_comparison_task_hbo.csv")
+sanity_results_rest = sanity_check(pairwise_average_samples, condition = 1)
+write_csv(sanity_results_rest, "Results/hbo/pairtype_comparison_rest_hbo.csv")
+
+
+real_condition_comparison = compare_conditions(pairwise_average_samples, surrogate = "real")
+write_csv(real_condition_comparison, "Results/hbo/condition_comparison_real_hbo.csv")
+surrogate_condition_comparison = compare_conditions(pairwise_average_samples, surrogate = "surrogate")
+write_csv(surrogate_condition_comparison, "Results/hbo/condition_comparison_surrogate_hbo.csv")
+
+
+```
