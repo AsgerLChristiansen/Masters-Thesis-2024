@@ -207,7 +207,7 @@ generated quantities {
    mu_beta_2_real_prior = normal_rng(-0.80, 0.5);
    mu_beta_2_surrogate_prior = normal_rng(-0.80, 0.5);
    mu_beta_3_real_prior = normal_rng(0.4, 0.2);
-   mu_beta_3_surrogate_prior = normal_rng(0.8, 3);
+   mu_beta_3_surrogate_prior = normal_rng(0, 0.3);
 
   
   real sigma_beta_1_real_prior;

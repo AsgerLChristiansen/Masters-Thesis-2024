@@ -115,7 +115,7 @@ dataframe %>% ggplot() +
   geom_density(aes(mu_beta_1_real), fill = "blue", alpha = 0.3) +
   geom_density(aes(mu_beta_1_real_prior), fill = "red", alpha = 0.3) +
   ylab("Density") +
-  theme_classic()+ ggtitle(expression(paste("Prior-Posterior Comparison - Average Visit 1 Coherence in Real Pairs (", mu,beta[0]^1,  ") "))) +
+  theme_classic()+ ggtitle(expression(paste("Prior-Posterior Comparison - Average Visit 1 Coherence in Real Pairs (", mu,beta[1]^1,  ") "))) +
   xlab("Parameter Value")
   parameter = "mu_beta_1_real_hbr"
   paste("Plots", "/", parameter, ".png", sep = "") %>% ggsave()
@@ -130,7 +130,7 @@ dataframe %>% ggplot() +
   geom_density(aes(mu_beta_1_surrogate_prior), fill = "red", alpha = 0.3) +
   geom_vline(xintercept = 0, size = 2)  +
   ylab("Density") +
-  theme_classic()+ ggtitle(expression(paste("Prior-Posterior Comparison - Average Visit 4 Coherence in Real Pairs (", mu,beta[0]^2,  ") "))) +
+  theme_classic()+ ggtitle(expression(paste("Prior-Posterior Comparison - Average Visit 4 Coherence in Real Pairs (", mu,beta[1]^2,  ") "))) +
   xlab("Parameter Value")
   parameter = "mu_beta_2_real_hbr"
   paste("Plots", "/", parameter, ".png", sep = "") %>% ggsave()
@@ -145,7 +145,7 @@ dataframe %>% ggplot() +
   geom_density(aes(mu_beta_2_real_prior), fill = "red", alpha = 0.3) +
   geom_vline(xintercept = 0, size = 2)  +
   ylab("Density") +
-  theme_classic()+ ggtitle(expression(paste("Prior-Posterior Comparison - Average Visit 1 Coherence in Surrogate Pairs (", mu,beta[1]^1,  ") "))) +
+  theme_classic()+ ggtitle(expression(paste("Prior-Posterior Comparison - Average Visit 1 Coherence in Surrogate Pairs (", mu,beta[2]^1,  ") "))) +
   xlab("Parameter Value")
   parameter = "mu_beta_1_surrogate_hbr"
   paste("Plots", "/", parameter, ".png", sep = "") %>% ggsave()
@@ -157,7 +157,7 @@ dataframe %>% ggplot() +
   geom_density(aes(mu_beta_2_surrogate_prior), fill = "red", alpha = 0.3) +
   geom_vline(xintercept = 0, size = 2)  +
   ylab("Density") +
-  theme_classic()+ ggtitle(expression(paste("Prior-Posterior Comparison - Average Visit 4 Coherence in Surrogate Pairs (", mu,beta[1]^2,  ") "))) +
+  theme_classic()+ ggtitle(expression(paste("Prior-Posterior Comparison - Average Visit 4 Coherence in Surrogate Pairs (", mu,beta[2]^2,  ") "))) +
   xlab("Parameter Value")
   parameter = "mu_beta_2_surrogate_hbr"
   paste("Plots", "/", parameter, ".png", sep = "") %>% ggsave()
@@ -185,7 +185,7 @@ dataframe %>% ggplot() +
   geom_density(aes(mu_beta_1_real_prior), fill = "red", alpha = 0.3) +
   geom_vline(xintercept = 0, size = 2)  +
   ylab("Density") +
-  theme_classic()+ ggtitle(expression(paste("Prior-Posterior Comparison - Average Visit 1 Coherence in Real Pairs (", mu,beta[0]^1,  ") "))) +
+  theme_classic()+ ggtitle(expression(paste("Prior-Posterior Comparison - Average Visit 1 Coherence in Real Pairs (", mu,beta[1]^1,  ") "))) +
   xlab("Parameter Value")
   parameter = "mu_beta_1_real_hbo"
   paste("Plots", "/", parameter, ".png", sep = "") %>% ggsave()
@@ -199,7 +199,7 @@ dataframe %>% ggplot() +
   geom_density(aes(mu_beta_2_surrogate_prior), fill = "red", alpha = 0.3) +
   geom_vline(xintercept = 0, size = 2)  +
   ylab("Density") +
-  theme_classic()+ ggtitle(expression(paste("Prior-Posterior Comparison - Average Visit 4 Coherence in Real Pairs (", mu,beta[0]^2,  ") "))) +
+  theme_classic()+ ggtitle(expression(paste("Prior-Posterior Comparison - Average Visit 4 Coherence in Real Pairs (", mu,beta[1]^2,  ") "))) +
   xlab("Parameter Value")
   parameter = "mu_beta_2_real_hbo"
   paste("Plots", "/", parameter, ".png", sep = "") %>% ggsave()
@@ -216,7 +216,7 @@ dataframe %>% ggplot() +
   geom_density(aes(mu_beta_2_real_prior), fill = "red", alpha = 0.3) +
   geom_vline(xintercept = 0, size = 2)  +
   ylab("Density") +
-  theme_classic()+ ggtitle(expression(paste("Prior-Posterior Comparison - Average Visit 1 Coherence in Surrogate Pairs (", mu,beta[1]^1,  ") "))) +
+  theme_classic()+ ggtitle(expression(paste("Prior-Posterior Comparison - Average Visit 1 Coherence in Surrogate Pairs (", mu,beta[2]^1,  ") "))) +
   xlab("Parameter Value")
   parameter = "mu_beta_1_surrogate_hbo"
   paste("Plots", "/", parameter, ".png", sep = "") %>% ggsave()
@@ -228,7 +228,7 @@ dataframe %>% ggplot() +
   geom_density(aes(mu_beta_2_surrogate_prior), fill = "red", alpha = 0.3) +
   geom_vline(xintercept = 0, size = 2)+
   ylab("Density") +
-  theme_classic()+ ggtitle(expression(paste("Prior-Posterior Comparison - Average Visit 4 Coherence in Surrogate Pairs (", mu,beta[1]^2,  ") "))) +
+  theme_classic()+ ggtitle(expression(paste("Prior-Posterior Comparison - Average Visit 4 Coherence in Surrogate Pairs (", mu,beta[2]^2,  ") "))) +
   xlab("Parameter Value")
   parameter = "mu_beta_2_surrogate_hbo"
   paste("Plots", "/", parameter, ".png", sep = "") %>% ggsave()
